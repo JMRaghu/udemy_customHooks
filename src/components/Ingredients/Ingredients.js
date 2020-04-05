@@ -1,15 +1,43 @@
-import React, {useState,useEffect, useCallback} from 'react';
+import React, {useReducer,useState,useEffect, useCallback} from 'react';
 
 import IngredientForm from './IngredientForm';
 import Search from './Search';
 import IngredientList from'./IngredientList'
 import ErrorModel from '../UI/ErrorModal'
 
-const  Ingredients = () =>{
-  const [userIngredients, setuserIngredients] = useState([]);
-  const [isLoading,setIsLoading] = useState(false);
-  const [error,setError] = useState();
+/* useReducer concept */
+const ingredientReducer = (currentIngredients,action) =>{
+  switch(action.type){
+    case 'SET':
+      return action.filterIngredients
+    case 'ADD':
+      return [...currentIngredients,action.ingredient]
+    case 'DELETE':
+      return currentIngredients.filter(ing=>ing.id !== action.id)
+    default:
+       throw new Error('Should not get there');
+  }
+}
+const httpReducer = (currhttp,action)=>{
+    switch(action.type){
+      case 'SEND':
+        return {isLoading:true,error:null}
+      case 'RESPONSE':
+        return {...currhttp , isLoading:false}
+      case 'ERROR':
+        return {isLoading:false,error:action.errorMessage}
+      case 'CLEAR':
+        return{...currhttp,error:null}
+      default:throw new Error('Should not get there')
+    }
 
+}
+const  Ingredients = () =>{
+  //const [userIngredients, setuserIngredients] = useState([]);
+  //const [isLoading,setIsLoading] = useState(false);
+  //const [error,setError] = useState();
+  const [userIngredients,dispatch]=useReducer(ingredientReducer,[])
+  const [httpData,dispatchHttp]=useReducer(httpReducer,{isLoading:false,error:null})
  /*  useEffect(()=>{
     fetch('https://ingredients-bd209.firebaseio.com/ingredients.json')
     .then(response =>response.json())
@@ -25,27 +53,31 @@ const  Ingredients = () =>{
     setuserIngredients(loadIngredients);//update the state
     })
   },[]);//[] specify dependencies acts like componentDidMount(called only once) */
-  //we are calling this useeffect in search componect so get ridding of this extra render cycle
+  //filter will get inital/current value 
+  //we are calling this useeffect in search componect so get rid of this extra render cycle
 
   useEffect (()=>console.log('Rendering arguments',userIngredients) ,[userIngredients] )
   //the useEffect will run when there is a change in [userIngredients]
     
   const addIngredientsHandler = (ingredientsFromIngredientsForm) =>{
-    setIsLoading(true);
+    //setIsLoading(true);//useState
+    dispatchHttp({type:'SEND'});
     fetch('https://ingredients-bd209.firebaseio.com/ingredients.json',{
       method:'POST',
       body:JSON.stringify(ingredientsFromIngredientsForm),
       headers:{'Content-Type':'application/json'}
       //fetch always has promises
     }).then(response =>{
-      setIsLoading(false);
+      //setIsLoading(false);//useState
+      dispatchHttp({type:'RESPONSE'});
       return response.json() //will be converted to js object
       }).then(responseData =>{ //responseData will be obj  ect now
-        setuserIngredients(prevIngredients=>[
+        /* setuserIngredients(prevIngredients=>[
           ...prevIngredients,
           {id:responseData.name,...ingredientsFromIngredientsForm}
           //firebase has name instead of id
-          ])
+          ]) */
+          dispatch({type:'ADD',ingredient: {id:responseData.name,...ingredientsFromIngredientsForm}})
       })
   }
   //Parent component gets loaded because first time when we load data we call 'onFilterIngredients'
@@ -58,32 +90,38 @@ const  Ingredients = () =>{
   const getFilterIngredients =
   useCallback((filterData) =>{
     console.log('filterdata'+filterData)
-    setuserIngredients(filterData);
+    //setuserIngredients(filterData);
+    dispatch({type:'SET', filterIngredients:filterData});
   },[])
 
   const removeIngredients = ingredientsIDFromIngredientsForm =>{
-    setIsLoading(true);
+   // setIsLoading(true);//useState
+    dispatchHttp({type:'SEND'});
     fetch(`https://ingredients-bd209.firebaseio.com/ingredients/${ingredientsIDFromIngredientsForm}.json`,{
       method:'DELETE',
       //fetch always has promises
     }).then(response =>{
-      setIsLoading(false);
-    setuserIngredients(prevIngredients =>
-      prevIngredients.filter(ingredient => ingredient.id !== ingredientsIDFromIngredientsForm)
-    )
-    }).catch(error =>{
-      setError(error.message)
       //setIsLoading(false);
+      dispatchHttp({type:'RESPONSE'})
+  /*   setuserIngredients(prevIngredients =>
+      prevIngredients.filter(ingredient => ingredient.id !== ingredientsIDFromIngredientsForm)
+    ) */
+    dispatch({type:'DELETE',id:ingredientsIDFromIngredientsForm})
+    }).catch(error =>{
+      //setError(error.message); // useState
+      //setIsLoading(false); // useState
+      dispatchHttp({type:'ERROR',errorMessage:error.message});
     })
   }
   const onClickErrorOkay = () =>{
-    setError(null);
-    setIsLoading(false);
+    //setError(null);//useState
+    //setIsLoading(false);//useState
+    dispatchHttp({type:'CLEAR'})
   }
   return (
       <div className="App">
-        {error && <ErrorModel onClose={onClickErrorOkay}>{error}</ErrorModel>}
-      <IngredientForm onAddIngredients={addIngredientsHandler} loading={isLoading} />
+        {httpData.error && <ErrorModel onClose={onClickErrorOkay}>{httpData.error}</ErrorModel>}
+      <IngredientForm onAddIngredients={addIngredientsHandler} loading={httpData.isLoading} />
 
       <section>
         <Search onFilterIngredients={getFilterIngredients} />
