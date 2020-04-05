@@ -32,7 +32,7 @@ const Search = React.memo(props => {
         }
       },500)
       //return should always be a function unmount kind of things
-      //clean up all unwanted times and make app faster
+      //clean up all unwanted items many times and make app faster
       return () =>{
         clearTimeout(timer)
       }

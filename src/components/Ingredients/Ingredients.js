@@ -89,7 +89,7 @@ const  Ingredients = () =>{
 //it is not recreated or run again
   const getFilterIngredients =
   useCallback((filterData) =>{
-    console.log('filterdata'+filterData)
+    console.log('filterdata'+JSON.stringify(filterData))
     //setuserIngredients(filterData);
     dispatch({type:'SET', filterIngredients:filterData});
   },[])
