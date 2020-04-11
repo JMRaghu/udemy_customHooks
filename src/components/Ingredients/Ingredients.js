@@ -1,4 +1,6 @@
-import React, {useReducer,useState,useEffect, useCallback} from 'react';
+//useCallBack is used to save function ,that doesn't change so that no new function is generated
+//useMemo is used to save a value which is saved so the value isn't recreated
+import React, {useReducer,useState,useEffect, useCallback, useMemo} from 'react';
 
 import IngredientForm from './IngredientForm';
 import Search from './Search';
@@ -59,7 +61,7 @@ const  Ingredients = () =>{
   useEffect (()=>console.log('Rendering arguments',userIngredients) ,[userIngredients] )
   //the useEffect will run when there is a change in [userIngredients]
     
-  const addIngredientsHandler = (ingredientsFromIngredientsForm) =>{
+  const addIngredientsHandler = useCallback((ingredientsFromIngredientsForm) =>{
     //setIsLoading(true);//useState
     dispatchHttp({type:'SEND'});
     fetch('https://ingredients-bd209.firebaseio.com/ingredients.json',{
@@ -79,7 +81,9 @@ const  Ingredients = () =>{
           ]) */
           dispatch({type:'ADD',ingredient: {id:responseData.name,...ingredientsFromIngredientsForm}})
       })
-  }
+  },[])//[] check if there is any dependies which is coming from outside method
+//so no dependies but 'dispatchHttp'is a dependent but react take vares of that internally
+
   //Parent component gets loaded because first time when we load data we call 'onFilterIngredients'
   //which calls 'getFilterIngredients' in that we are calling 'setuserIngredients' which changes the state
   //again rerenders component which means that it is creating 'getFilterIngredients'function bcoz entire components reruns
@@ -94,7 +98,7 @@ const  Ingredients = () =>{
     dispatch({type:'SET', filterIngredients:filterData});
   },[])
 
-  const removeIngredients = ingredientsIDFromIngredientsForm =>{
+  const removeIngredients = useCallback(ingredientsIDFromIngredientsForm =>{
    // setIsLoading(true);//useState
     dispatchHttp({type:'SEND'});
     fetch(`https://ingredients-bd209.firebaseio.com/ingredients/${ingredientsIDFromIngredientsForm}.json`,{
@@ -112,12 +116,21 @@ const  Ingredients = () =>{
       //setIsLoading(false); // useState
       dispatchHttp({type:'ERROR',errorMessage:error.message});
     })
-  }
-  const onClickErrorOkay = () =>{
+  },[])//again no dependies
+  const onClickErrorOkay = useCallback(() =>{
     //setError(null);//useState
     //setIsLoading(false);//useState
     dispatchHttp({type:'CLEAR'})
-  }
+  })
+
+  // use memo here or in ingredients list
+  const ingredientListNew = useMemo(() =>{
+    return(
+    <IngredientList
+      ingredients={userIngredients}
+      onRemoveItem={removeIngredients}
+    />)
+  },[userIngredients,removeIngredients]);
   return (
       <div className="App">
         {httpData.error && <ErrorModel onClose={onClickErrorOkay}>{httpData.error}</ErrorModel>}
@@ -125,7 +138,8 @@ const  Ingredients = () =>{
 
       <section>
         <Search onFilterIngredients={getFilterIngredients} />
-        <IngredientList ingredients={userIngredients} onRemoveItem={removeIngredients} />
+      
+        {ingredientListNew}
       </section>
     </div>
   );

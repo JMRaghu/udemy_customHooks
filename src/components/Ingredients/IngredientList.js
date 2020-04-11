@@ -1,8 +1,10 @@
 import React from 'react';
 
 import './IngredientList.css';
-
+//we can useMemo here but other logic is written in ingeridents.js
+//const IngredientList = useMemo(props => {},[])
 const IngredientList = props => {
+  console.log('RenderIngredient List')
   return (
     <section className="ingredient-list">
       <h2>Loaded Ingredients</h2>
